@@ -1,0 +1,43 @@
+PREFIX schema: <http://schema.org/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX inst: <http://www.ontotext.com/connectors/lucene/instance#>
+PREFIX : <http://www.ontotext.com/connectors/lucene#>
+
+select ?ingredients ?recipe ?name ?recYield ?recImage
+where {
+    graph <https://broker.semantify.it/graph/Or1IAoO73z/WrJWA3u72z/latest>{
+    ?s schema:recipeInstructions ?recipe;
+       schema:ingredients ?ingredients;
+       schema:name ?name;
+       OPTIONAL{?s schema:recipeYield ?recYield}
+       OPTIONAL{?s schema:image ?recImage}
+    {select ?s where {
+    graph <https://broker.semantify.it/graph/Or1IAoO73z/WrJWA3u72z/latest> {
+        #{ing}?search a inst:recipeConn ;
+        #{ing}:query "ingos:{ingSlot}" ;
+        #{ing}:entities ?s.
+        ?s a schema:Recipe.
+        ?s schema:interactionCount ?icount.
+        #{diff}?s schema:recipeCategory ?cateDiff.
+        #{time}?s schema:totalTime ?totalTime.
+        #{name}?s schema:name ?recName.
+
+        bind(STRAFTER(str(?icount),"UserViews: ") as ?realCount)
+
+        #{diff}bind(STRAFTER(str(?cateDiff),"difficulty=") as ?difficulty)
+        #{time}bind(substr(str(?totalTime),3,strlen(?totalTime)-3) as ?durationAmount)
+
+
+        #{diff}filter(?difficulty!="" && xsd:integer(?difficulty){diffSign}3)
+        #{time}filter(xsd:decimal(?durationAmount) <= {timeSlot})
+        #{name}filter(contains(lcase(str(?recName)), "{nameSlot}"))
+    }
+}
+order by desc(xsd:integer(?realCount))
+
+limit 5
+offset {offset}
+    }
+   }
+    FILTER(!strStarts(?recipe,"Tipp"))
+}
